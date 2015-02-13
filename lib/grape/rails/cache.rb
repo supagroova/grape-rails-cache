@@ -24,13 +24,18 @@ module Grape
               cache_control << "no-cache"
             else
               cache_control << "max-age=#{seconds}"
+              if options[:expires_header]
+                header 'Expires', seconds.seconds.from_now.httpdate
+              end
             end
             if options[:public]
               cache_control << "public"
             else
               cache_control << "private"
             end
-
+            
+            options.delete(:expires_header)
+            
             # This allows for additional headers to be passed through like 'max-stale' => 5.hours
             cache_control += options.symbolize_keys.reject{|k,v| k == :public || k == :private }.map{ |k,v| v == true ? k.to_s : "#{k.to_s}=#{v.to_s}"}
 
@@ -46,7 +51,11 @@ module Grape
             cache_key = opts[:key]
 
             # Set Cache-Control
-            expires_in(opts[:expires_in] || default_expire_time, public: opts.fetch(:public, true) )
+            expires_in(
+              opts[:expires_in] || default_expire_time, 
+              public:           opts.fetch(:public, true), 
+              expires_header:   opts.fetch(:expires_header, false) 
+            )
 
             if opts[:etag]
               cache_key += ActiveSupport::Cache.expand_cache_key(opts[:etag])
